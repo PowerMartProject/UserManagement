@@ -27,5 +27,15 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<String> otpGenerationFailedException(OtpGenerationException exception){
 		return new ResponseEntity<String>(exception.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
 	}
+	
+	@ExceptionHandler(NullValueException.class)
+	public ResponseEntity<String> nullValueException(NullValueException exception){
+		return new ResponseEntity<String>(exception.getMessage(),HttpStatus.BAD_REQUEST);
+	}
+	
+	@ExceptionHandler(BuilderException.class)
+	public ResponseEntity<String> builderException(BuilderException exception){
+		return new ResponseEntity<String>(exception.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
+	}
 
 }

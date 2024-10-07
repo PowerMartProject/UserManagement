@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AddressInputDto {
 	
+	private String name;
+	
 	private String StreetName;
 	
 	private String pinCode;
@@ -20,5 +22,9 @@ public class AddressInputDto {
 	private String state;
 	
 	private String country;
+	
+	private String mobileNumber;
+	
+	private String alternateMobileNumber;
 
 }

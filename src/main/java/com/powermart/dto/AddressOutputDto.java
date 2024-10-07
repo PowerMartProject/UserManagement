@@ -11,6 +11,8 @@ public class AddressOutputDto {
 	
 	private long addressId;
 	
+	private String name;
+	
 	private String StreetName;
 	
 	private String pinCode;
@@ -22,5 +24,9 @@ public class AddressOutputDto {
 	private String state;
 	
 	private String country;
+	
+	private String mobileNumber;
+	
+	private String alternateMobileNumber;
 
 }

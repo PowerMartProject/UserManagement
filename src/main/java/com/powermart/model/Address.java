@@ -27,7 +27,10 @@ public class Address {
 	@GeneratedValue(strategy = GenerationType.IDENTITY )
 	@Column(name = "address_id")
 	private long addressId;
-	 
+	
+	@Column(nullable = false)
+	private String name;
+	
 	@Column(name="street_name",nullable = false)
 	private String StreetName;
 	
@@ -45,6 +48,12 @@ public class Address {
 	
 	@Column(nullable = false)
 	private String country;
+	
+	@Column(name ="mobile_number",nullable = false)
+	private String mobileNumber;
+	
+	@Column(name ="alternate_mobile_number")
+	private String alternateMobileNumber;
 	
 	@ManyToOne
 	@JoinColumn(name = "user_id")

@@ -20,7 +20,9 @@ import com.powermart.dto.OtpDto;
 import com.powermart.dto.UserDetailsDto;
 import com.powermart.dto.UserLoginDto;
 import com.powermart.dto.UserSignUpDto;
+import com.powermart.exceptions.BuilderException;
 import com.powermart.exceptions.EmailNotFoundException;
+import com.powermart.exceptions.NullValueException;
 import com.powermart.exceptions.OtpGenerationException;
 import com.powermart.exceptions.PasswordMismatchException;
 import com.powermart.exceptions.UserAlreadyExistsException;
@@ -46,38 +48,59 @@ public class UserServiceImpl implements UserService{
 	public ResponseEntity<String> signUp(UserSignUpDto userSignUpDto) {
 		
 		Optional<User> user = userRepository.findUserByEmailId(userSignUpDto.getEmailId());
-		
+		User user2 =null;
 		if(user.isPresent()) {
 			
 			logger.error("User already exists with user email : " + userSignUpDto.getEmailId());
 			throw new UserAlreadyExistsException("User already exists with email id : " + userSignUpDto.getEmailId());
 		}
+		
 		try {
-			User user2 = userBuilder.buildUserFromSignUpDto(userSignUpDto);
+			user2 = userBuilder.buildUserFromSignUpDto(userSignUpDto);
+			logger.info("User Object Built from User Signup Dto");
+		}catch(Exception ex) {
+			logger.error("Error While converting dto to entity");
+			throw new BuilderException("Error While converting dto to entity");
+		}
+		
+		try {
 			User savedUser = userRepository.save(user2);
 			logger.info("User Saved successfully with user email : "+ savedUser.getEmailId());
 			return new ResponseEntity<String>(savedUser.getEmailId(),HttpStatus.CREATED);
 			
 		}catch(Exception exception) {
 			
-			logger.error("Received null value");
-			return new ResponseEntity<String>("",HttpStatus.BAD_REQUEST);
+			logger.error("Failed to Save in DB");
+			return new ResponseEntity<String>("Failed to Save in DB",HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
 
 	@Override
 	public ResponseEntity<UserDetailsDto> login(UserLoginDto userLoginDto) {
+		Optional<User> user = Optional.empty();
+		try {
+			
+			user = userRepository.findUserByEmailId(userLoginDto.getEmailId());
+		}catch(Exception ex) {
+			logger.error("Failed to Get Details From DB");
+			return new ResponseEntity<UserDetailsDto>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 		
-		Optional<User> user = userRepository.findUserByEmailId(userLoginDto.getEmailId());
-		System.out.println(user.get());
+		
 		if(user.isPresent()) {
 			
 			if(user.get().getEmailId().equals(userLoginDto.getEmailId()) && user.get().getPassword().equals(userLoginDto.getPassword())) {
 				
 				logger.info("Login success for user with user email : "+ userLoginDto.getEmailId());
-				UserDetailsDto userDetailsDto = userDetailsDtoBuilder.buildUserDetailsDtoFromUser(user.get());
-				return new ResponseEntity<UserDetailsDto>(userDetailsDto,HttpStatus.OK);
+				try {
+					UserDetailsDto userDetailsDto = userDetailsDtoBuilder.buildUserDetailsDtoFromUser(user.get());
+					logger.info("User Details Dto Object Built from User Entity");
+					return new ResponseEntity<UserDetailsDto>(userDetailsDto,HttpStatus.OK);
+				}catch(Exception ex) {
+					logger.error("Error While converting Entity to Dto");
+					throw new BuilderException("Error While converting Entity to Dto");
+				}
 			
 			}else {
 				
@@ -92,25 +115,50 @@ public class UserServiceImpl implements UserService{
 	}
 
 
-	public UserDetailsDto getUserDetails(String email) {
+	public ResponseEntity<UserDetailsDto> getUserDetails(String emailId) {
 		
-		Optional<User> user = userRepository.findUserByEmailId(email);
+		Optional<User> user = Optional.empty();
+		try {
+			
+			user = userRepository.findUserByEmailId(emailId);
+		}catch(Exception ex) {
+			logger.error("Failed to Get Details From DB");
+			return new ResponseEntity<UserDetailsDto>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 		
 		if(user.isPresent()) {
-			UserDetailsDto userDetailsDto = userDetailsDtoBuilder.buildUserDetailsDtoFromUser(user.get());
-			return userDetailsDto;
+			try {
+				UserDetailsDto userDetailsDto = userDetailsDtoBuilder.buildUserDetailsDtoFromUser(user.get());
+				logger.info("User Details Dto Object Built from User Entity");
+				return new ResponseEntity<UserDetailsDto>(userDetailsDto,HttpStatus.OK);
+			}catch(Exception ex) {
+				logger.error("Error While converting Entity to Dto");
+				throw new BuilderException("Error While converting Entity to Dto");
+			}
+		}else {
+			logger.info("User Not Found With Email Id : " + emailId);
+			throw new EmailNotFoundException("User Not Found With Email Id : " +emailId);
+		
 		}
-		return null;
 	}
 
 
 	@Override
 	public ResponseEntity<String> verifyEmail(String emailId) {
-		Optional<User> user = userRepository.findUserByEmailId(emailId);
+		Optional<User> user = Optional.empty();
+		try {
+			
+			user = userRepository.findUserByEmailId(emailId);
+		}catch(Exception ex) {
+			logger.error("Failed to Get Details From DB");
+			return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
 		if(user.isEmpty()) {
 			logger.info("User Not Found With Email Id : " + emailId);
 			throw new EmailNotFoundException("User Not Found With Email Id : " +emailId);
 		}
+		
 		String otp = generateOtp(user.get());
 		System.out.println(otp);
 		return new ResponseEntity<String>("Otp Sent",HttpStatus.OK);
@@ -134,33 +182,51 @@ public class UserServiceImpl implements UserService{
 
 	@Override
 	public ResponseEntity<String> validateOtp(OtpDto otpDto) {
-		Optional<User> user = userRepository.findUserByEmailId(otpDto.getEmailId());
+		Optional<User> user = Optional.empty();
+		try {
+			
+			user = userRepository.findUserByEmailId(otpDto.getEmailId());
+		}catch(Exception ex) {
+			logger.error("Failed to Get Details From DB");
+			return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
 		if(user.isPresent()) {
 			if(user.get().getOtp().equals(otpDto.getOtp()) && user.get().getOtpExpiration().isAfter(LocalDateTime.now())) {
 				return new ResponseEntity<String>("Valid Otp",HttpStatus.OK);
 			}else {
 				return new ResponseEntity<String>("Invalid Otp",HttpStatus.UNAUTHORIZED); 
 			}
+		}else {
+			logger.info("User Not Found With Email Id : " + otpDto.getEmailId());
+			throw new EmailNotFoundException("User Not Found With Email Id : " +otpDto.getEmailId());
 		}
-		return new ResponseEntity<String>("User Not Found",HttpStatus.NOT_FOUND);
 	}
 
 
 	public ResponseEntity<String> changePassword(UserLoginDto userLoginDto) {
 		if(ObjectUtils.isEmpty(userLoginDto)) {
-			logger.error("Received null value");
-			return new ResponseEntity<String>("Received Null Values",HttpStatus.NO_CONTENT);
+			logger.error("Received Null values");
+			throw new NullValueException("Received null Values");
 		}
 		try {
 			BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 			String encodedPassword = passwordEncoder.encode(userLoginDto.getPassword());
 			
 			
-			Optional<User> user = userRepository.findUserByEmailId(userLoginDto.getEmailId());
+			Optional<User> user = Optional.empty();
+			try {
+				user = userRepository.findUserByEmailId(userLoginDto.getEmailId());
+			}catch(Exception ex) {
+				logger.error("Failed to Get Details From DB");
+				return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+			
 			if(user.isEmpty()) {
 				logger.info("User Not Found With Email Id : " + userLoginDto.getEmailId());
 				throw new EmailNotFoundException("User Not Found With Email Id : " +userLoginDto.getEmailId());
 			}
+			
 			user.get().setPassword(encodedPassword);
 			User savedUser = userRepository.save(user.get());
 			if(savedUser !=null) {
