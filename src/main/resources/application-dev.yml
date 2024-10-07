@@ -1,8 +1,7 @@
 spring:
   datasource:
-   # url: jdbc:h2:file:~/spring-boot-h2-db;DB_CLOSE_ON_EXIT=TRUE
-    #url: jdbc:h2:tcp://localhost/~/test-db;DB_CLOSE_ON_EXIT=TRUE;IFEXISTS=FALSE
-    url: jdbc:h2:mem:testdb
+    # Using file-based H2 database for persistence
+    url: jdbc:h2:file:./data/testdb;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: root
     password: root
@@ -16,8 +15,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka
+
       
        
     
-      
+  
     
